@@ -1,0 +1,129 @@
+# Reproducible Research: Peer Assessment 1
+
+## Loading and preprocessing the data
+```{r,echo=TRUE}
+new <- read.csv('./activity.csv')
+```
+
+## What is mean total number of steps taken per day?
+Create new data set by aggregating by day the number of steps.
+```{r}
+totalsteps <-aggregate(new[,1], by=list(new[,2]), FUN=sum, na.rm=TRUE)
+```
+
+Plotting total number of steps per day.
+```{r}
+plot(x=as.Date(totalsteps[,1]),y=totalsteps[,2],type='h',
+main='Total Number of Steps per Day',ylab='Number of Steps',xlab='Date',lwd=6)
+```
+
+Data frame with mean number of steps per day.
+```{r}
+meanperday <- aggregate(new[,1], by=list(new[,2]), FUN=mean, na.rm=TRUE)
+colnames(meanperday) <- c('Date','Mean')
+meanperday
+```
+
+Data frame with median number of steps per day.
+```{r}
+medianperday <- aggregate(new[,1], by=list(new[,2]), FUN=median, na.rm=TRUE)
+colnames(medianperday) <- c('Date','Median')
+medianperday
+```
+
+## What is the average daily activity pattern?
+Constructing new data frame by aggregating by time interval the number of steps.
+```{r}
+avedailypattern <-aggregate(new[,1], by=list(new[,3]), FUN=mean, na.rm=TRUE)
+```
+
+Plotting time series.
+```{r}
+plot(x=avedailypattern[,1],y=avedailypattern[,2],type='l',
+main='Average Number of Steps Across All Days per Interval',
+ylab='Average Number of Steps',xlab='Daily Five Minute Interval',lwd=2)
+```
+
+5-minute interval with highest number of steps.
+```{r}
+avedailypattern[avedailypattern[,2]==max(avedailypattern[,2]),][1,1]
+```
+
+## Imputing missing values
+Total number of NA's.
+```{r}
+sum(is.na(new[,1]))
+```
+
+Reading in same file but with a different name. Now we modify the dataset by using a for loop to identify the NA's within the dataset and changing them to a new value. The method I used is to replace the NA with its corresponding mean number of steps by time interval, which was done in the previous question.
+
+On a techinical note, the for loop for the i's refers to the number of days and the for loop for the j's refers to the 5-minute time intervals.
+```{r}
+newer <- read.csv('./activity.csv')
+for(i in 1:nrow(totalsteps)){
+  for(j in 1:nrow(avedailypattern)){
+		if(is.na(newer[j+(i-1)*nrow(avedailypattern),1]) == TRUE){
+			newer[j+(i-1)*nrow(avedailypattern),1] <- avedailypattern[j,2]
+		}
+	}
+}
+```
+
+Exact repeat of the second question, except with NA's removed. Create new data set by aggregating by days the number of steps.
+```{r}
+totalsteps2 <-aggregate(newer[,1], by=list(newer[,2]), FUN=sum, na.rm=TRUE)
+```
+
+Plotting histogram of total number of steps per day.
+```{r}
+plot(x=as.Date(totalsteps2[,1]),y=totalsteps2[,2],type='h',
+main='Total Number of Steps per Day',ylab='Number of Steps',xlab='Date',lwd=6)
+```
+
+Data frame with mean number of steps per day.
+```{r}
+meanperday2 <- aggregate(newer[,1], by=list(newer[,2]), FUN=mean, na.rm=TRUE)
+colnames(meanperday) <- c('Date','Mean')
+meanperday2
+```
+
+Data frame with median number of steps per day.
+```{r}
+medianperday2 <- aggregate(newer[,1], by=list(newer[,2]), FUN=median, na.rm=TRUE)
+colnames(medianperday) <- c('Date','Median')
+medianperday2
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+Creating new data frame with a factor variable, which splits the data frame between weekdays and weekends. We first create an empty data frame for the for loop, and then look at our data frame's data column to identify and group them into their appropriate factor groups. Last, we combine via columns.
+```{r}
+Factor <- data.frame(rep(NA,length(new[,1])))
+for(i in 1:length(new[,1])){
+  if(weekdays(as.Date(new[i,2])) == c('Saturday') | weekdays(as.Date(new[i,2])) == c('Sunday')){
+		Factor[i,1] <- (c('Weekend'))
+	}
+	else{
+		Factor[i,1] <- (c('Weekday'))
+	}
+}
+final <- cbind(new,Factor)
+```
+
+Create new data frame by aggregating by time interval AND the new factor variable the number of steps. Rename columns to be more readable. Construct more data frames according to their factor.
+```{r}
+avedailypattern2 <-aggregate(final[,1], by=list(final[,3],final[,4]), FUN=mean, na.rm=TRUE)
+colnames(avedailypattern2) <- c('interval','factor','mean steps')
+weekdays <- avedailypattern2[avedailypattern2$factor == 'Weekday',]
+weekends <- avedailypattern2[avedailypattern2$factor == 'Weekend',]
+```
+
+Using the regular plotting system in R, we tell R we want two plots in one screen. Then we plot both time series, first the weekdays and then the weekends.
+```{r}
+par(mfrow=c(2,1))
+plot(x=weekdays[,1],y=weekdays[,3],type='l',
+main='Average Number of Steps Across Weekdays per Interval',
+ylab='Average Number of Steps',xlab='Daily Five Minute Interval',lwd=2)
+plot(x=weekends[,1],y=weekends[,3],type='l',
+main='Average Number of Steps Across Weekends per Interval',
+ylab='Average Number of Steps',xlab='Daily Five Minute Interval',lwd=2)
+```
